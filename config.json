@@ -1,0 +1,15 @@
+{
+    "groupId": "18094266177-1517460976@g.us",
+    "comandosHabilitados": true,
+    "cronExpresion": "0 15 * * 3",
+    "rotationStartDate": "2026-07-10",
+    "ministries": [
+        { "name": "Adolescentes", "image": "images/adolescentes.jpg", "label": "los Adolescentes" },
+        { "name": "Familia", "image": "images/Familia.jpg", "label": "la Familia" },
+        { "name": "Nuevos Creyentes", "image": "images/Nuevos Creyentes.jpeg", "label": "los Nuevos Creyentes" },
+        { "name": "Evangelismo", "image": "images/Evangelismo.jpg", "label": "Evangelismo" },
+        { "name": "Jóvenes", "image": "images/Jovenes.jpg", "label": "los Jóvenes" },
+        { "name": "Damas", "image": "images/Damas.jpg", "label": "las Damas" },
+        { "name": "Caballeros", "image": "images/Caballeros.jpg", "label": "los Caballeros" }
+    ]
+}
