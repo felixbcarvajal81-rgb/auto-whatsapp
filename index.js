@@ -80,11 +80,16 @@ async function startBot() {
 
     sock.ev.on('messages.upsert', async ({ messages }) => {
         for (const msg of messages) {
-            if (!msg.message || msg.key.fromMe) continue;
+            const key = msg.key;
+            const fromMe = key?.fromMe;
+            const jid = key?.remoteJid;
             const body = msg.message?.conversation ||
-                         msg.message?.extendedTextMessage?.text || '';
-            if (!body || !config.comandosHabilitados) continue;
-            console.error(`CMD: ${body} de ${msg.key.remoteJid}`);
+                         msg.message?.extendedTextMessage?.text ||
+                         msg.message?.imageMessage?.caption || '';
+
+            console.error(`MSG: fromMe=${fromMe} jid=${jid} body="${body.substring(0,30)}"`);
+
+            if (!body || fromMe || !config.comandosHabilitados) continue;
 
             if (body.toLowerCase() === '!proximo') {
                 try {
@@ -97,7 +102,9 @@ async function startBot() {
                         const d = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][s.targetDay];
                         r += `▸ *${d}* (${f}): ${grupo.label}\n`;
                     });
-                    await sock.sendMessage(msg.key.remoteJid, { text: r });
+                    console.error(`ENVIANDO respuesta a ${jid}`);
+                    await sock.sendMessage(jid, { text: r });
+                    console.error('RESPUESTA ENVIADA');
                 } catch (e) { console.error('Error !proximo:', e.message); }
             }
 
@@ -106,7 +113,7 @@ async function startBot() {
                     const groups = await sock.groupFetchAllParticipating();
                     let lista = '📋 *Grupos del bot*\n\n';
                     Object.entries(groups).forEach(([id, g]) => { lista += `▸ ${g.subject}\n  ID: ${id}\n\n`; });
-                    await sock.sendMessage(msg.key.remoteJid, { text: lista });
+                    await sock.sendMessage(jid, { text: lista });
                 } catch (e) { console.error('Error !grupos:', e.message); }
             }
         }
