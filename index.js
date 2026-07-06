@@ -59,6 +59,16 @@ client.on('message', async (msg) => {
             respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
         });
         await client.sendMessage(msg.from, respuesta);
+        return;
+    }
+    if (config.comandosHabilitados && msg.body.toLowerCase() === '!grupos') {
+        const chats = await client.getChats();
+        const grupos = chats.filter(c => c.isGroup);
+        let lista = '📋 *Grupos donde está el bot*\n\n';
+        grupos.forEach(g => {
+            lista += `▸ ${g.name}\n  ID: ${g.id._serialized}\n\n`;
+        });
+        await client.sendMessage(msg.from, lista);
     }
 });
 
