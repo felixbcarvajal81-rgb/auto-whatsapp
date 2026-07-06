@@ -1,5 +1,5 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const QRCode = require('qrcode');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { toDataURL } = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -8,6 +8,14 @@ const config = require('./config.json');
 const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const PORT = process.env.PORT || 3000;
+const AUTH_DIR = path.join(__dirname, 'auth_info');
+let sock = null;
+
+// Clean up old puppeteer stuff
+['.wwebjs_auth', '.wwebjs_cache'].forEach(d => {
+    const p = path.join(__dirname, d);
+    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+});
 
 const server = http.createServer((req, res) => {
     res.writeHead(200);
@@ -15,126 +23,113 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
-// Limpiar caché pero conservar sesión si existe
-const cachePath = path.join(__dirname, '.wwebjs_cache');
-if (fs.existsSync(cachePath)) fs.rmSync(cachePath, { recursive: true, force: true });
+async function startBot() {
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        handleSIGINT: false,
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-            '--disable-webgl',
-            '--js-flags=--max-old-space-size=256'
-        ]
-    }
-});
+    sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        syncFullHistory: false,
+        markOnlineOnConnect: false,
+        generateHighQualityLinkPreview: false,
+    });
 
-client.on('qr', async (qr) => {
-    try {
-        const now = new Date().toLocaleTimeString();
-        const dataUrl = await QRCode.toDataURL(qr, { width: 200, margin: 1 });
-        console.error(`[${now}] QR NUEVO - copia y pega en navegador:`);
-        console.error(dataUrl);
-    } catch (err) {
-        console.error('Error QR:', err);
-    }
-});
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
 
-client.on('auth_failure', (msg) => {
-    console.error('Error de autenticación:', msg);
-});
-
-client.on('disconnected', async (reason) => {
-    console.log('Desconectado:', reason);
-    setTimeout(() => client.initialize(), 5000);
-});
-
-client.on('ready', async () => {
-    console.error('=== CONECTADO A WHATSAPP ===');
-
-    config.schedules.forEach(s => {
-        if (s.active) {
+        if (qr) {
             try {
-                iniciarProgramador(s);
+                const now = new Date().toLocaleTimeString();
+                const dataUrl = await toDataURL(qr, { width: 200, margin: 1 });
+                console.error(`[${now}] QR NUEVO - copia y pega en navegador:`);
+                console.error(dataUrl);
             } catch (e) {
-                console.error(`Error en programador ${s.name}:`, e.message);
+                console.error('Error QR:', e);
+            }
+            return;
+        }
+
+        if (connection === 'open') {
+            console.error('=== CONECTADO A WHATSAPP ===');
+
+            config.schedules.forEach(s => {
+                if (s.active) {
+                    try {
+                        iniciarProgramador(s);
+                    } catch (e) {
+                        console.error(`Error en programador ${s.name}:`, e.message);
+                    }
+                }
+            });
+
+            try {
+                await sock.sendMessage(config.groupId, { text: '✅ Bot iniciado y listo' });
+            } catch (err) {
+                console.error('ERROR mensaje prueba:', err.message);
+            }
+        }
+
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.error('Desconectado, reconectando...');
+            if (shouldReconnect) {
+                setTimeout(startBot, 5000);
+            } else {
+                console.error('Sesión cerrada, eliminando auth...');
+                if (fs.existsSync(AUTH_DIR)) fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                setTimeout(startBot, 5000);
             }
         }
     });
 
-    try {
-        await client.sendMessage(config.groupId, '✅ Bot iniciado y listo');
-    } catch (err) {
-        console.error('ERROR mensaje prueba:', err.message);
-    }
-});
+    sock.ev.on('creds.update', saveCreds);
 
-client.on('message', (msg) => {
-    console.error(`EVENTO message: from=${msg.from}, body=${msg.body}`);
-    procesarMensaje(msg);
-});
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        for (const msg of messages) {
+            if (!msg.message || msg.key.fromMe) continue;
 
-client.on('message_create', (msg) => {
-    procesarMensaje(msg);
-});
+            const body = msg.message?.conversation ||
+                         msg.message?.extendedTextMessage?.text || '';
 
-async function procesarMensaje(msg) {
-    try {
-        if (!msg.body) return;
-        console.error(`PROCESANDO: ${msg.body}`);
-        if (!config.comandosHabilitados) return;
+            if (!body || !config.comandosHabilitados) continue;
 
-        if (msg.body.toLowerCase() === '!proximo') {
-            let respuesta = '📅 *Próximos eventos*\n\n';
-            config.schedules.forEach(s => {
-                if (!s.active) return;
-                const grupo = getGrupoSemana(s);
-                const target = getProximoDia(s.targetDay);
-                const fecha = target.toLocaleDateString('es-ES', {
-                    weekday: 'long', day: 'numeric', month: 'long'
+            console.error(`MENSAJE: ${body} de ${msg.key.remoteJid}`);
+
+            if (body.toLowerCase() === '!proximo') {
+                let respuesta = '📅 *Próximos eventos*\n\n';
+                config.schedules.forEach(s => {
+                    if (!s.active) return;
+                    const grupo = getGrupoSemana(s);
+                    const target = getProximoDia(s.targetDay);
+                    const fecha = target.toLocaleDateString('es-ES', {
+                        weekday: 'long', day: 'numeric', month: 'long'
+                    });
+                    const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
+                    respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
                 });
-                const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
-                respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
-            });
-            const destino = msg.fromMe ? config.groupId : msg.from;
-            await client.sendMessage(destino, respuesta);
-            console.error(`Respuesta enviada a ${destino}`);
-            return;
-        }
+                await sock.sendMessage(msg.key.remoteJid, { text: respuesta });
+                console.error(`Respuesta a !proximo enviada`);
+            }
 
-        if (msg.body.toLowerCase() === '!grupos') {
-            const chats = await client.getChats();
-            const grupos = chats.filter(c => c.isGroup);
-            let lista = '📋 *Grupos del bot*\n\n';
-            grupos.forEach(g => {
-                lista += `▸ ${g.name}\n  ID: ${g.id._serialized}\n\n`;
-            });
-            const destino = msg.fromMe ? config.groupId : msg.from;
-            await client.sendMessage(destino, lista);
+            if (body.toLowerCase() === '!grupos') {
+                try {
+                    const groups = await sock.groupFetchAllParticipating();
+                    let lista = '📋 *Grupos del bot*\n\n';
+                    Object.entries(groups).forEach(([id, g]) => {
+                        lista += `▸ ${g.subject}\n  ID: ${id}\n\n`;
+                    });
+                    await sock.sendMessage(msg.key.remoteJid, { text: lista });
+                } catch (e) {
+                    console.error('Error listando grupos:', e.message);
+                }
+            }
         }
-    } catch (err) {
-        console.error('Error en mensaje:', err);
-    }
+    });
 }
-
-client.initialize();
-
-process.on('SIGINT', async () => {
-    console.log('\nCerrando sesión...');
-    await client.destroy();
-    process.exit(0);
-});
 
 function iniciarProgramador(schedule) {
     const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][schedule.targetDay];
-    console.log(`Programador: ${schedule.name} → ${schedule.cron}`);
+    console.error(`Programador: ${schedule.name} → ${schedule.cron}`);
 
     cron.schedule(schedule.cron, async () => {
         try {
@@ -150,17 +145,28 @@ function iniciarProgramador(schedule) {
             if (grupo.image) {
                 const imagePath = path.join(__dirname, grupo.image);
                 if (fs.existsSync(imagePath)) {
-                    const media = MessageMedia.fromFilePath(imagePath);
-                    await client.sendMessage(config.groupId, media, { caption: mensaje });
+                    const img = fs.readFileSync(imagePath);
+                    const ext = path.extname(imagePath).slice(1);
+                    await sock.sendMessage(config.groupId, {
+                        image: img,
+                        caption: mensaje,
+                        mimetype: `image/${ext === 'jpg' ? 'jpeg' : ext}`
+                    });
                 } else {
-                    await client.sendMessage(config.groupId, mensaje);
+                    await sock.sendMessage(config.groupId, { text: mensaje });
                 }
             } else {
-                await client.sendMessage(config.groupId, mensaje);
+                await sock.sendMessage(config.groupId, { text: mensaje });
             }
-            console.log(`[${schedule.name}] Enviado: ${grupo.name}`);
+            console.error(`[${schedule.name}] Enviado: ${grupo.name}`);
         } catch (err) {
-            console.error(`[${schedule.name}] Error:`, err);
+            console.error(`[${schedule.name}] Error:`, err.message);
         }
     });
 }
+
+startBot();
+
+process.on('SIGINT', () => process.exit(0));
+process.on('uncaughtException', (err) => console.error('No capturado:', err.message));
+process.on('unhandledRejection', (err) => console.error('Rechazo:', err.message));
