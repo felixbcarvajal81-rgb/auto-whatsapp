@@ -1,4 +1,4 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { toDataURL } = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
@@ -10,6 +10,7 @@ const { getGrupoSemana, getProximoDia } = require('./rotation');
 const PORT = process.env.PORT || 3000;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 let sock = null;
+let retryCount = 0;
 
 // Clean up old puppeteer stuff
 ['.wwebjs_auth', '.wwebjs_cache'].forEach(d => {
@@ -32,8 +33,11 @@ async function startBot() {
         console.error('Auth nuevo — se necesita QR');
     }
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.error(`Baileys v${version.join('.')}, latest=${isLatest}`);
 
     sock = makeWASocket({
+        version,
         auth: state,
         printQRInTerminal: false,
         syncFullHistory: false,
@@ -65,14 +69,16 @@ async function startBot() {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.error(`Desconectado. Código: ${statusCode}`);
+            console.error(`Desconectado. Código: ${statusCode} (intento #${retryCount + 1})`);
             if (statusCode === DisconnectReason.loggedOut) {
                 console.error('Sesión cerrada — eliminando auth y reiniciando');
                 if (fs.existsSync(AUTH_DIR)) fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-            } else {
-                console.error('Reconectando automáticamente...');
+                retryCount = 0;
             }
-            setTimeout(() => startBot(), 3000);
+            const delay = Math.min(30000 * Math.pow(2, retryCount), 300000); // up to 5 min
+            retryCount++;
+            console.error(`Reconectando en ${delay / 1000}s...`);
+            setTimeout(() => startBot(), delay);
         }
     });
 
