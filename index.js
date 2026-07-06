@@ -95,7 +95,7 @@ async function startBot() {
 
             console.error(`MSG: fromMe=${fromMe} jid=${jid} body="${body.substring(0,30)}"`);
 
-            if (!body || fromMe || !config.comandosHabilitados) continue;
+            if (!body || !config.comandosHabilitados) continue;
 
             if (body.toLowerCase() === '!proximo') {
                 try {
