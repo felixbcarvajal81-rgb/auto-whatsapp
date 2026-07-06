@@ -27,7 +27,7 @@
             "targetDay": 3,
             "messageTemplate": "🎓 *Escuela de Formación de Liderazgo* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — ¡Te esperamos! 🙌",
             "groups": [
-                { "name": "Escuela de Liderazgo", "image": "", "label": "la Escuela de Formación de Liderazgo" }
+                { "name": "Escuela de Liderazgo", "image": "images/escuela_liderazgo.jpg", "label": "la Escuela de Formación de Liderazgo" }
             ]
         },
         {
@@ -38,12 +38,12 @@
             "targetDay": 0,
             "messageTemplate": "📖 *Grupo de Crecimiento* 📖\n\nEste *domingo* ({fecha}) dirige *{label}*\n\n¡Te esperamos! 🎉",
             "groups": [
-                { "name": "Rafael Mauricio", "image": "", "label": "Rafael Mauricio" },
-                { "name": "Miledys Gonzalez", "image": "", "label": "Miledys Gonzalez" },
-                { "name": "Juan R Perez y Carmen de los Santos", "image": "", "label": "Juan R. Pérez y Carmen de los Santos" },
-                { "name": "Kevin Castro", "image": "", "label": "Kevin Castro" },
-                { "name": "Bien Social", "image": "", "label": "Bien Social" },
-                { "name": "Ezequiel de la Rosa", "image": "", "label": "Ezequiel de la Rosa" }
+                { "name": "Rafael Mauricio", "image": "images/rafael_mauricio.jpg", "label": "Rafael Mauricio" },
+                { "name": "Miledys Gonzalez", "image": "images/miledys_gonzalez.jpg", "label": "Miledys Gonzalez" },
+                { "name": "Juan R Perez y Carmen de los Santos", "image": "images/juan_perez.jpg", "label": "Juan R. Pérez y Carmen de los Santos" },
+                { "name": "Kevin Castro", "image": "images/kevin_castro.jpg", "label": "Kevin Castro" },
+                { "name": "Bien Social", "image": "images/bien_social.jpg", "label": "Bien Social" },
+                { "name": "Ezequiel de la Rosa", "image": "images/ezequiel_rosa.jpg", "label": "Ezequiel de la Rosa" }
             ]
         }
     ]
