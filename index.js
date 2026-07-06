@@ -15,6 +15,11 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
+const authPath = path.join(__dirname, '.wwebjs_auth');
+if (fs.existsSync(authPath)) {
+    fs.rmSync(authPath, { recursive: true, force: true });
+}
+
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
