@@ -1,5 +1,4 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const { toString: qrToString } = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -28,21 +27,15 @@ const client = new Client({
     }
 });
 
-client.on('qr', async (qr) => {
-    console.log('╔══════════════════════════════════════════╗');
-    console.log('║  ESCANEA EL QR CON TU WHATSAPP           ║');
-    console.log('║  (Ajustes > Dispositivos vinculados)     ║');
-    console.log('╚══════════════════════════════════════════╝');
-    try {
-        const qrText = await qrToString(qr, { type: 'terminal', small: true });
-        console.log(qrText);
-    } catch (e) {
-        console.log('QR raw (copia el enlace en tu navegador):');
-        console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
-    }
-    console.log('╔══════════════════════════════════════════╗');
-    console.log('║  ESCANEA EL QR DE ARRIBA                 ║');
-    console.log('╚══════════════════════════════════════════╝');
+client.on('qr', (qr) => {
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
+    console.log('═══════════════════════════════════════════════');
+    console.log('ABRE ESTE LINK EN TU NAVEGADOR Y ESCANEA EL QR');
+    console.log('DESDE WHATSAPP > AJUSTES > DISPOSITIVOS VINC.');
+    console.log('');
+    console.log(url);
+    console.log('');
+    console.log('═══════════════════════════════════════════════');
 });
 
 client.on('auth_failure', (msg) => {
