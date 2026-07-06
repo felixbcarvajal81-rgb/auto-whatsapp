@@ -46,7 +46,8 @@ client.on('ready', async () => {
 });
 
 client.on('message', async (msg) => {
-    if (config.comandosHabilitados && msg.body.toLowerCase() === '!proximo') {
+    console.log(`Mensaje recibido de ${msg.from}: ${msg.body}`);
+    if (config.comandosHabilitados && msg.body && msg.body.toLowerCase() === '!proximo') {
         let respuesta = '📅 *Próximos eventos*\n\n';
         config.schedules.forEach(s => {
             if (!s.active) return;
