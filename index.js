@@ -9,23 +9,15 @@ const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const PORT = process.env.PORT || 3000;
 
-let qrSvg = null;
-
 const server = http.createServer((req, res) => {
-    if (req.url === '/qr' && qrSvg) {
-        res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
-        res.end(qrSvg);
-    } else {
-        res.writeHead(200);
-        res.end('Bot running');
-    }
+    res.writeHead(200);
+    res.end('Bot running');
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
-['.wwebjs_auth', '.wwebjs_cache'].forEach(dir => {
-    const p = path.join(__dirname, dir);
-    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
-});
+// Limpiar caché pero conservar sesión si existe
+const cachePath = path.join(__dirname, '.wwebjs_cache');
+if (fs.existsSync(cachePath)) fs.rmSync(cachePath, { recursive: true, force: true });
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -46,12 +38,10 @@ const client = new Client({
 
 client.on('qr', async (qr) => {
     try {
-        qrSvg = await QRCode.toString(qr, { type: 'svg', width: 300 });
-        const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
         const now = new Date().toLocaleTimeString();
-        console.error(`[${now}] === NUEVO QR ===`);
+        const dataUrl = await QRCode.toDataURL(qr, { width: 200, margin: 1 });
+        console.error(`[${now}] QR NUEVO - copia y pega en navegador:`);
         console.error(dataUrl);
-        console.error(`[${now}] Copia la línea de arriba (data:) y pégala en el navegador`);
     } catch (err) {
         console.error('Error QR:', err);
     }
@@ -68,21 +58,11 @@ client.on('disconnected', async (reason) => {
 
 client.on('ready', async () => {
     console.error('=== CONECTADO A WHATSAPP ===');
-    try {
-        const chats = await client.getChats();
-        const grupos = chats.filter(c => c.isGroup);
-        console.error(`=== GRUPOS (${grupos.length}) ===`);
-        grupos.forEach(g => console.error(`${g.name} | ${g.id._serialized}`));
-        console.error('=== FIN GRUPOS ===');
-    } catch (e) {
-        console.error('Error listando grupos:', e.message);
-    }
 
     config.schedules.forEach(s => {
         if (s.active) {
             try {
                 iniciarProgramador(s);
-                console.error(`Programador iniciado: ${s.name}`);
             } catch (e) {
                 console.error(`Error en programador ${s.name}:`, e.message);
             }
@@ -90,11 +70,9 @@ client.on('ready', async () => {
     });
 
     try {
-        console.error(`Enviando mensaje a: ${config.groupId}`);
         await client.sendMessage(config.groupId, '✅ Bot iniciado y listo');
-        console.error('Mensaje OK');
     } catch (err) {
-        console.error('ERROR al enviar mensaje:', err.message);
+        console.error('ERROR mensaje prueba:', err.message);
     }
 });
 
