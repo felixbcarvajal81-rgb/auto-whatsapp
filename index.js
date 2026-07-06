@@ -1,5 +1,5 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const { toString: qrToString, toDataURL } = require('qrcode');
+const QRCode = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -9,9 +9,16 @@ const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const PORT = process.env.PORT || 3000;
 
+let qrSvg = null;
+
 const server = http.createServer((req, res) => {
-    res.writeHead(200);
-    res.end('Bot running');
+    if (req.url === '/qr' && qrSvg) {
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+        res.end(qrSvg);
+    } else {
+        res.writeHead(200);
+        res.end('Bot running');
+    }
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
@@ -38,16 +45,21 @@ const client = new Client({
 
 client.on('qr', async (qr) => {
     try {
-        const terminal = await qrToString(qr, { type: 'terminal', small: true });
+        qrSvg = await QRCode.toString(qr, { type: 'svg' });
+        const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
         console.log('');
-        console.log('╔══════════════════════════════════════════════╗');
-        console.log('║ ESCANEA EL QR DE ABAJO CON TU WHATSAPP      ║');
-        console.log('╚══════════════════════════════════════════════╝');
-        console.log(terminal);
-        console.log('╔══════════════════════════════════════════════╗');
-        console.log('║ WhatsApp > Dispositivos vinculados          ║');
-        console.log('╚══════════════════════════════════════════════╝');
+        console.log('╔══════════════════════════════════════════════════╗');
+        console.log('║  ESCANEA EL QR:                                  ║');
+        console.log('║  1. Abre WhatsApp > Dispositivos vinculados      ║');
+        console.log('║  2. Copia TODO el texto de abajo (empieza con    ║');
+        console.log('║     "data:image/png;base64,...")                 ║');
+        console.log('║  3. Pégalo en la barra de direcciones del        ║');
+        console.log('║     navegador para ver el QR                     ║');
+        console.log('╚══════════════════════════════════════════════════╝');
         console.log('');
+        console.log(dataUrl);
+        console.log('');
+        console.log('╚═══════ FIN DEL QR ═══════╝');
     } catch (err) {
         console.error('Error QR:', err);
     }
