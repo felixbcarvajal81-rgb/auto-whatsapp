@@ -1,5 +1,5 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const QRCode = require('qrcode');
+const { toString: qrToString } = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -34,7 +34,7 @@ client.on('qr', async (qr) => {
     console.log('║  (Ajustes > Dispositivos vinculados)     ║');
     console.log('╚══════════════════════════════════════════╝');
     try {
-        const qrText = await QRCode.toString(qr, { type: 'terminal', small: true });
+        const qrText = await qrToString(qr, { type: 'terminal', small: true });
         console.log(qrText);
     } catch (e) {
         console.log('QR raw (copia el enlace en tu navegador):');
