@@ -45,21 +45,15 @@ const client = new Client({
 
 client.on('qr', async (qr) => {
     try {
-        qrSvg = await QRCode.toString(qr, { type: 'svg' });
-        const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
+        qrSvg = await QRCode.toString(qr, { type: 'svg', width: 600 });
+        const dataUrl = await QRCode.toDataURL(qr, { width: 600, margin: 2, errorCorrectionLevel: 'H' });
+        const now = new Date().toLocaleTimeString();
         console.log('');
-        console.log('╔══════════════════════════════════════════════════╗');
-        console.log('║  ESCANEA EL QR:                                  ║');
-        console.log('║  1. Abre WhatsApp > Dispositivos vinculados      ║');
-        console.log('║  2. Copia TODO el texto de abajo (empieza con    ║');
-        console.log('║     "data:image/png;base64,...")                 ║');
-        console.log('║  3. Pégalo en la barra de direcciones del        ║');
-        console.log('║     navegador para ver el QR                     ║');
-        console.log('╚══════════════════════════════════════════════════╝');
-        console.log('');
+        console.log(`[${now}] NUEVO QR GENERADO — TODO EL TEXTO debajo:`);
         console.log(dataUrl);
-        console.log('');
-        console.log('╚═══════ FIN DEL QR ═══════╝');
+        console.log(`[${now}] Copia la línea de arriba (empieza con data:)`);
+        console.log('Pégala en el navegador y escanea con WhatsApp.');
+        console.log('Si expiró, espera unos segundos y aparecerá otro QR nuevo.');
     } catch (err) {
         console.error('Error QR:', err);
     }
