@@ -46,30 +46,38 @@ client.on('ready', async () => {
 });
 
 client.on('message', async (msg) => {
-    console.log(`Mensaje recibido de ${msg.from}: ${msg.body}`);
-    if (config.comandosHabilitados && msg.body && msg.body.toLowerCase() === '!proximo') {
-        let respuesta = '📅 *Próximos eventos*\n\n';
-        config.schedules.forEach(s => {
-            if (!s.active) return;
-            const grupo = getGrupoSemana(s);
-            const target = getProximoDia(s.targetDay);
-            const fecha = target.toLocaleDateString('es-ES', {
-                weekday: 'long', day: 'numeric', month: 'long'
+    try {
+        if (!msg.body) return;
+        console.log(`Mensaje: ${msg.body}`);
+        if (!config.comandosHabilitados) return;
+
+        if (msg.body.toLowerCase() === '!proximo') {
+            let respuesta = '📅 *Próximos eventos*\n\n';
+            config.schedules.forEach(s => {
+                if (!s.active) return;
+                const grupo = getGrupoSemana(s);
+                const target = getProximoDia(s.targetDay);
+                const fecha = target.toLocaleDateString('es-ES', {
+                    weekday: 'long', day: 'numeric', month: 'long'
+                });
+                const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
+                respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
             });
-            const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
-            respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
-        });
-        await client.sendMessage(msg.from, respuesta);
-        return;
-    }
-    if (config.comandosHabilitados && msg.body.toLowerCase() === '!grupos') {
-        const chats = await client.getChats();
-        const grupos = chats.filter(c => c.isGroup);
-        let lista = '📋 *Grupos donde está el bot*\n\n';
-        grupos.forEach(g => {
-            lista += `▸ ${g.name}\n  ID: ${g.id._serialized}\n\n`;
-        });
-        await client.sendMessage(msg.from, lista);
+            await client.sendMessage(msg.from, respuesta);
+            return;
+        }
+
+        if (msg.body.toLowerCase() === '!grupos') {
+            const chats = await client.getChats();
+            const grupos = chats.filter(c => c.isGroup);
+            let lista = '📋 *Grupos del bot*\n\n';
+            grupos.forEach(g => {
+                lista += `▸ ${g.name}\n  ID: ${g.id._serialized}\n\n`;
+            });
+            await client.sendMessage(msg.from, lista);
+        }
+    } catch (err) {
+        console.error('Error en mensaje:', err);
     }
 });
 
