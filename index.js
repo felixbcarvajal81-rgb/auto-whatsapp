@@ -1,5 +1,5 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const QRCode = require('qrcode');
+const { toString: qrToString, toDataURL } = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -15,33 +15,36 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
-const authPath = path.join(__dirname, '.wwebjs_auth');
-if (fs.existsSync(authPath)) {
-    fs.rmSync(authPath, { recursive: true, force: true });
-    console.log('Sesión anterior eliminada');
-}
-
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         handleSIGINT: false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+            '--single-process'
+        ]
     }
 });
 
 client.on('qr', async (qr) => {
     try {
-        const dataUrl = await QRCode.toDataURL(qr, { width: 400 });
-        console.log('═══════════════════════════════════════════════');
-        console.log('COPIA TODO EL TEXTO DE ABAJO (empieza con data:)');
-        console.log('PÉGALO EN LA BARRA DE DIRECCIONES DEL NAVEGADOR');
-        console.log('Y ESCANEA EL QR DESDE WHATSAPP');
+        const terminal = await qrToString(qr, { type: 'terminal', small: true });
         console.log('');
-        console.log(dataUrl);
+        console.log('╔══════════════════════════════════════════════╗');
+        console.log('║ ESCANEA EL QR DE ABAJO CON TU WHATSAPP      ║');
+        console.log('╚══════════════════════════════════════════════╝');
+        console.log(terminal);
+        console.log('╔══════════════════════════════════════════════╗');
+        console.log('║ WhatsApp > Dispositivos vinculados          ║');
+        console.log('╚══════════════════════════════════════════════╝');
         console.log('');
-        console.log('═══════════════════════════════════════════════');
     } catch (err) {
-        console.error('Error generando QR:', err);
+        console.error('Error QR:', err);
     }
 });
 
@@ -55,7 +58,6 @@ client.on('disconnected', async (reason) => {
 });
 
 client.on('ready', async () => {
-    console.clear();
     console.log('Conectado a WhatsApp');
     await listarGrupos();
     config.schedules.forEach(s => {
