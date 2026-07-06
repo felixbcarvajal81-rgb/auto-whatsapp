@@ -9,16 +9,9 @@ const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const PORT = process.env.PORT || 3000;
 
-let latestQrBuffer = null;
-
 const server = http.createServer((req, res) => {
-    if (req.url === '/qr' && latestQrBuffer) {
-        res.writeHead(200, { 'Content-Type': 'image/png' });
-        res.end(latestQrBuffer);
-    } else {
-        res.writeHead(200);
-        res.end('Bot running');
-    }
+    res.writeHead(200);
+    res.end('Bot running');
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
@@ -38,11 +31,14 @@ const client = new Client({
 
 client.on('qr', async (qr) => {
     try {
-        latestQrBuffer = await QRCode.toBuffer(qr, { type: 'png', width: 400 });
+        const dataUrl = await QRCode.toDataURL(qr, { width: 400 });
         console.log('═══════════════════════════════════════════════');
-        console.log('QR LISTO — Abre tu servicio de Render y agrega');
-        console.log('/qr al final de la URL para escanear:');
-        console.log('Ej: https://auto-whatsapp.onrender.com/qr');
+        console.log('COPIA TODO EL TEXTO DE ABAJO (empieza con data:)');
+        console.log('PÉGALO EN LA BARRA DE DIRECCIONES DEL NAVEGADOR');
+        console.log('Y ESCANEA EL QR DESDE WHATSAPP');
+        console.log('');
+        console.log(dataUrl);
+        console.log('');
         console.log('═══════════════════════════════════════════════');
     } catch (err) {
         console.error('Error generando QR:', err);
@@ -55,7 +51,6 @@ client.on('auth_failure', (msg) => {
 
 client.on('disconnected', async (reason) => {
     console.log('Desconectado:', reason);
-    latestQrBuffer = null;
     setTimeout(() => client.initialize(), 5000);
 });
 
