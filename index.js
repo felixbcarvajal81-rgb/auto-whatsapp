@@ -49,12 +49,9 @@ client.on('qr', async (qr) => {
         qrSvg = await QRCode.toString(qr, { type: 'svg', width: 300 });
         const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
         const now = new Date().toLocaleTimeString();
-        console.log('');
-        console.log(`[${now}] NUEVO QR GENERADO — TODO EL TEXTO debajo:`);
-        console.log(dataUrl);
-        console.log(`[${now}] Copia la línea de arriba (empieza con data:)`);
-        console.log('Pégala en el navegador y escanea con WhatsApp.');
-        console.log('Si expiró, espera unos segundos y aparecerá otro QR nuevo.');
+        console.error(`[${now}] === NUEVO QR ===`);
+        console.error(dataUrl);
+        console.error(`[${now}] Copia la línea de arriba (data:) y pégala en el navegador`);
     } catch (err) {
         console.error('Error QR:', err);
     }
@@ -70,18 +67,34 @@ client.on('disconnected', async (reason) => {
 });
 
 client.on('ready', async () => {
-    console.log('Conectado a WhatsApp');
-    await listarGrupos();
+    console.error('=== CONECTADO A WHATSAPP ===');
+    try {
+        const chats = await client.getChats();
+        const grupos = chats.filter(c => c.isGroup);
+        console.error(`=== GRUPOS (${grupos.length}) ===`);
+        grupos.forEach(g => console.error(`${g.name} | ${g.id._serialized}`));
+        console.error('=== FIN GRUPOS ===');
+    } catch (e) {
+        console.error('Error listando grupos:', e.message);
+    }
+
     config.schedules.forEach(s => {
-        if (s.active) iniciarProgramador(s);
+        if (s.active) {
+            try {
+                iniciarProgramador(s);
+                console.error(`Programador iniciado: ${s.name}`);
+            } catch (e) {
+                console.error(`Error en programador ${s.name}:`, e.message);
+            }
+        }
     });
 
     try {
-        console.log(`Intentando enviar a: ${config.groupId}`);
+        console.error(`Enviando mensaje a: ${config.groupId}`);
         await client.sendMessage(config.groupId, '✅ Bot iniciado y listo');
-        console.log('Mensaje de prueba enviado');
+        console.error('Mensaje OK');
     } catch (err) {
-        console.error('Error al enviar:', err.message);
+        console.error('ERROR al enviar mensaje:', err.message);
     }
 });
 
@@ -140,15 +153,6 @@ process.on('SIGINT', async () => {
     await client.destroy();
     process.exit(0);
 });
-
-async function listarGrupos() {
-    console.log('Buscando grupos...');
-    const chats = await client.getChats();
-    const grupos = chats.filter(c => c.isGroup);
-    console.log('\n--- GRUPOS ---');
-    grupos.forEach(g => console.log(`${g.name}: ${g.id._serialized}`));
-    console.log('---------------\n');
-}
 
 function iniciarProgramador(schedule) {
     const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][schedule.targetDay];
