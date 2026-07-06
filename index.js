@@ -24,6 +24,13 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
 async function startBot() {
+    if (fs.existsSync(AUTH_DIR)) {
+        const files = fs.readdirSync(AUTH_DIR).filter(f => f !== 'creds.json' && f.endsWith('.json'));
+        const hasCreds = fs.existsSync(path.join(AUTH_DIR, 'creds.json'));
+        console.error(`Auth ${hasCreds ? 'OK' : 'vacío'} (${files.length} sesiones)`);
+    } else {
+        console.error('Auth nuevo — se necesita QR');
+    }
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
     sock = makeWASocket({
@@ -32,7 +39,6 @@ async function startBot() {
         syncFullHistory: false,
         markOnlineOnConnect: false,
         generateHighQualityLinkPreview: false,
-        connectTimeoutMs: 60000,
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -59,12 +65,14 @@ async function startBot() {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.error(`Desconectado. Código: ${statusCode}. Mensaje: ${lastDisconnect?.error?.message}`);
+            console.error(`Desconectado. Código: ${statusCode}`);
             if (statusCode === DisconnectReason.loggedOut) {
-                console.error('Sesión cerrada, eliminando auth...');
+                console.error('Sesión cerrada — eliminando auth y reiniciando');
                 if (fs.existsSync(AUTH_DIR)) fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+            } else {
+                console.error('Reconectando automáticamente...');
             }
-            setTimeout(startBot, 3000);
+            setTimeout(() => startBot(), 3000);
         }
     });
 
