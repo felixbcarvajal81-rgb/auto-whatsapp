@@ -1,5 +1,5 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -13,6 +13,13 @@ http.createServer((req, res) => {
     res.end('Bot running');
 }).listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
+// Force fresh auth on every deploy
+const authPath = path.join(__dirname, '.wwebjs_auth');
+if (fs.existsSync(authPath)) {
+    fs.rmSync(authPath, { recursive: true, force: true });
+    console.log('Sesión anterior eliminada — escanea el QR nuevo');
+}
+
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
@@ -21,10 +28,21 @@ const client = new Client({
     }
 });
 
-client.on('qr', (qr) => {
-    console.clear();
-    console.log('▼ ESCANEA ESTE CÓDIGO CON TU CELULAR ▼\n');
-    qrcode.generate(qr, { small: true });
+client.on('qr', async (qr) => {
+    console.log('╔══════════════════════════════════════════╗');
+    console.log('║  ESCANEA EL QR CON TU WHATSAPP           ║');
+    console.log('║  (Ajustes > Dispositivos vinculados)     ║');
+    console.log('╚══════════════════════════════════════════╝');
+    try {
+        const qrText = await QRCode.toString(qr, { type: 'terminal', small: true });
+        console.log(qrText);
+    } catch (e) {
+        console.log('QR raw (copia el enlace en tu navegador):');
+        console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
+    }
+    console.log('╔══════════════════════════════════════════╗');
+    console.log('║  ESCANEA EL QR DE ARRIBA                 ║');
+    console.log('╚══════════════════════════════════════════╝');
 });
 
 client.on('auth_failure', (msg) => {
@@ -39,16 +57,34 @@ client.on('disconnected', async (reason) => {
 client.on('ready', async () => {
     console.clear();
     console.log('Conectado a WhatsApp');
-    // await listarGrupos();
+    await listarGrupos();
     config.schedules.forEach(s => {
         if (s.active) iniciarProgramador(s);
     });
+
+    // Prueba: enviar un mensaje al grupo al conectarse
+    try {
+        console.log(`Intentando enviar a: ${config.groupId}`);
+        await client.sendMessage(config.groupId, '✅ Bot iniciado y listo');
+        console.log('Mensaje de prueba enviado');
+    } catch (err) {
+        console.error('Error al enviar:', err.message);
+    }
 });
 
-client.on('message', async (msg) => {
+client.on('message', (msg) => {
+    console.error(`EVENTO message: from=${msg.from}, body=${msg.body}`);
+    procesarMensaje(msg);
+});
+
+client.on('message_create', (msg) => {
+    procesarMensaje(msg);
+});
+
+async function procesarMensaje(msg) {
     try {
         if (!msg.body) return;
-        console.log(`Mensaje: ${msg.body}`);
+        console.error(`PROCESANDO: ${msg.body}`);
         if (!config.comandosHabilitados) return;
 
         if (msg.body.toLowerCase() === '!proximo') {
@@ -63,7 +99,9 @@ client.on('message', async (msg) => {
                 const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
                 respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
             });
-            await client.sendMessage(msg.from, respuesta);
+            const destino = msg.fromMe ? config.groupId : msg.from;
+            await client.sendMessage(destino, respuesta);
+            console.error(`Respuesta enviada a ${destino}`);
             return;
         }
 
@@ -74,12 +112,13 @@ client.on('message', async (msg) => {
             grupos.forEach(g => {
                 lista += `▸ ${g.name}\n  ID: ${g.id._serialized}\n\n`;
             });
-            await client.sendMessage(msg.from, lista);
+            const destino = msg.fromMe ? config.groupId : msg.from;
+            await client.sendMessage(destino, lista);
         }
     } catch (err) {
         console.error('Error en mensaje:', err);
     }
-});
+}
 
 client.initialize();
 
