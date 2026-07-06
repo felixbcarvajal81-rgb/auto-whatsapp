@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 let sock = null;
 let retryCount = 0;
+const cronTasks = {};
 
 // Clean up old puppeteer stuff
 ['.wwebjs_auth', '.wwebjs_cache'].forEach(d => {
@@ -127,9 +128,13 @@ async function startBot() {
 
 function iniciarProgramador(schedule) {
     const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][schedule.targetDay];
+
+    if (cronTasks[schedule.name]) {
+        cronTasks[schedule.name].stop();
+    }
     console.error(`Programador: ${schedule.name} → ${schedule.cron}`);
 
-    cron.schedule(schedule.cron, async () => {
+    cronTasks[schedule.name] = cron.schedule(schedule.cron, async () => {
         try {
             const grupo = getGrupoSemana(schedule);
             const target = getProximoDia(schedule.targetDay);
