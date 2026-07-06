@@ -1,4 +1,5 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const QRCode = require('qrcode');
 const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
@@ -7,16 +8,24 @@ const config = require('./config.json');
 const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const PORT = process.env.PORT || 3000;
-http.createServer((req, res) => {
-    res.writeHead(200);
-    res.end('Bot running');
-}).listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
-// Force fresh auth on every deploy
+let latestQrBuffer = null;
+
+const server = http.createServer((req, res) => {
+    if (req.url === '/qr' && latestQrBuffer) {
+        res.writeHead(200, { 'Content-Type': 'image/png' });
+        res.end(latestQrBuffer);
+    } else {
+        res.writeHead(200);
+        res.end('Bot running');
+    }
+});
+server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
+
 const authPath = path.join(__dirname, '.wwebjs_auth');
 if (fs.existsSync(authPath)) {
     fs.rmSync(authPath, { recursive: true, force: true });
-    console.log('Sesión anterior eliminada — escanea el QR nuevo');
+    console.log('Sesión anterior eliminada');
 }
 
 const client = new Client({
@@ -27,15 +36,17 @@ const client = new Client({
     }
 });
 
-client.on('qr', (qr) => {
-    const url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
-    console.log('═══════════════════════════════════════════════');
-    console.log('ABRE ESTE LINK EN TU NAVEGADOR Y ESCANEA EL QR');
-    console.log('DESDE WHATSAPP > AJUSTES > DISPOSITIVOS VINC.');
-    console.log('');
-    console.log(url);
-    console.log('');
-    console.log('═══════════════════════════════════════════════');
+client.on('qr', async (qr) => {
+    try {
+        latestQrBuffer = await QRCode.toBuffer(qr, { type: 'png', width: 400 });
+        console.log('═══════════════════════════════════════════════');
+        console.log('QR LISTO — Abre tu servicio de Render y agrega');
+        console.log('/qr al final de la URL para escanear:');
+        console.log('Ej: https://auto-whatsapp.onrender.com/qr');
+        console.log('═══════════════════════════════════════════════');
+    } catch (err) {
+        console.error('Error generando QR:', err);
+    }
 });
 
 client.on('auth_failure', (msg) => {
@@ -44,6 +55,7 @@ client.on('auth_failure', (msg) => {
 
 client.on('disconnected', async (reason) => {
     console.log('Desconectado:', reason);
+    latestQrBuffer = null;
     setTimeout(() => client.initialize(), 5000);
 });
 
@@ -55,7 +67,6 @@ client.on('ready', async () => {
         if (s.active) iniciarProgramador(s);
     });
 
-    // Prueba: enviar un mensaje al grupo al conectarse
     try {
         console.log(`Intentando enviar a: ${config.groupId}`);
         await client.sendMessage(config.groupId, '✅ Bot iniciado y listo');
