@@ -33,7 +33,7 @@
         {
             "name": "Grupos Crecimiento Domingo",
             "active": true,
-            "cron": "0 17 * * 3",
+            "cron": "0 17 * * 5",
             "rotationStartDate": "2026-07-12",
             "targetDay": 0,
             "messageTemplate": "📖 *Grupo de Crecimiento* 📖\n\nEste *domingo* ({fecha}) dirige *{label}*\n\n¡Te esperamos! 🎉",
