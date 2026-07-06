@@ -22,10 +22,10 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
-const authPath = path.join(__dirname, '.wwebjs_auth');
-if (fs.existsSync(authPath)) {
-    fs.rmSync(authPath, { recursive: true, force: true });
-}
+['.wwebjs_auth', '.wwebjs_cache'].forEach(dir => {
+    const p = path.join(__dirname, dir);
+    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+});
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -38,15 +38,16 @@ const client = new Client({
             '--disable-dev-shm-usage',
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
-            '--single-process'
+            '--disable-webgl',
+            '--js-flags=--max-old-space-size=256'
         ]
     }
 });
 
 client.on('qr', async (qr) => {
     try {
-        qrSvg = await QRCode.toString(qr, { type: 'svg', width: 600 });
-        const dataUrl = await QRCode.toDataURL(qr, { width: 600, margin: 2, errorCorrectionLevel: 'H' });
+        qrSvg = await QRCode.toString(qr, { type: 'svg', width: 300 });
+        const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
         const now = new Date().toLocaleTimeString();
         console.log('');
         console.log(`[${now}] NUEVO QR GENERADO — TODO EL TEXTO debajo:`);
