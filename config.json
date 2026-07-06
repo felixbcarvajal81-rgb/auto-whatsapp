@@ -25,7 +25,7 @@
             "cron": "0 10 * * 1",
             "rotationStartDate": "2026-07-06",
             "targetDay": 3,
-            "messageTemplate": "🎓 *Escuela de Formación de Liderazgo* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — ¡Te esperamos! 🙌",
+            "messageTemplate": "🎓 *Escuela de Formación de Liderazgo* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — Segunda Carta de Timoteo Cap 2\n\n¡Te esperamos! 🙌",
             "groups": [
                 { "name": "Escuela de Liderazgo", "image": "images/Escuela_Liderazgo.png", "label": "la Escuela de Formación de Liderazgo" }
             ]
