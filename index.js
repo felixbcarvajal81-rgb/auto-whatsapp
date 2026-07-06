@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
 const config = require('./config.json');
-const { getMinisterioSemana, getProximoViernes } = require('./rotation');
+const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -32,20 +32,26 @@ client.on('disconnected', async (reason) => {
 client.on('ready', async () => {
     console.clear();
     console.log('Conectado a WhatsApp');
-    // Descomenta para ver los IDs de grupos:
     // await listarGrupos();
-    iniciarProgramador();
+    config.schedules.forEach(s => {
+        if (s.active) iniciarProgramador(s);
+    });
 });
 
 client.on('message', async (msg) => {
     if (config.comandosHabilitados && msg.body.toLowerCase() === '!proximo') {
-        const ministerio = getMinisterioSemana();
-        const viernes = getProximoViernes();
-        const fecha = viernes.toLocaleDateString('es-ES', {
-            weekday: 'long', day: 'numeric', month: 'long'
+        let respuesta = '📅 *Próximos eventos*\n\n';
+        config.schedules.forEach(s => {
+            if (!s.active) return;
+            const grupo = getGrupoSemana(s);
+            const target = getProximoDia(s.targetDay);
+            const fecha = target.toLocaleDateString('es-ES', {
+                weekday: 'long', day: 'numeric', month: 'long'
+            });
+            const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
+            respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
         });
-        await client.sendMessage(msg.from,
-            `📅 *Próximo viernes* (${fecha})\n\nDirigen: *${ministerio.label}*`);
+        await client.sendMessage(msg.from, respuesta);
     }
 });
 
@@ -66,28 +72,35 @@ async function listarGrupos() {
     console.log('---------------\n');
 }
 
-function iniciarProgramador() {
-    console.log(`Programador iniciado: miércoles 3:00 PM`);
+function iniciarProgramador(schedule) {
+    const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][schedule.targetDay];
+    console.log(`Programador: ${schedule.name} → ${schedule.cron}`);
 
-    cron.schedule(config.cronExpresion, async () => {
+    cron.schedule(schedule.cron, async () => {
         try {
-            const ministerio = getMinisterioSemana();
-            const viernes = getProximoViernes();
-            const fecha = viernes.toLocaleDateString('es-ES', {
+            const grupo = getGrupoSemana(schedule);
+            const target = getProximoDia(schedule.targetDay);
+            const fecha = target.toLocaleDateString('es-ES', {
                 weekday: 'long', day: 'numeric', month: 'long'
             });
-            const mensaje = `🙏 *Recordatorio Semanal* 🙏\n\nRecuerda que este *viernes* (${fecha}) dirigen *${ministerio.label}*\n\n¡Prepárate para ministrar! 🕊️`;
+            const mensaje = schedule.messageTemplate
+                .replace('{fecha}', fecha)
+                .replace('{label}', grupo.label);
 
-            const imagePath = path.join(__dirname, ministerio.image);
-            if (fs.existsSync(imagePath)) {
-                const media = MessageMedia.fromFilePath(imagePath);
-                await client.sendMessage(config.groupId, media, { caption: mensaje });
+            if (grupo.image) {
+                const imagePath = path.join(__dirname, grupo.image);
+                if (fs.existsSync(imagePath)) {
+                    const media = MessageMedia.fromFilePath(imagePath);
+                    await client.sendMessage(config.groupId, media, { caption: mensaje });
+                } else {
+                    await client.sendMessage(config.groupId, mensaje);
+                }
             } else {
                 await client.sendMessage(config.groupId, mensaje);
             }
-            console.log(`Notificación enviada: ${ministerio.name}`);
+            console.log(`[${schedule.name}] Enviado: ${grupo.name}`);
         } catch (err) {
-            console.error('Error al enviar notificación:', err);
+            console.error(`[${schedule.name}] Error:`, err);
         }
     });
 }

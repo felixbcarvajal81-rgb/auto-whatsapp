@@ -1,15 +1,39 @@
 {
     "groupId": "18094266177-1517460976@g.us",
     "comandosHabilitados": true,
-    "cronExpresion": "0 15 * * 3",
-    "rotationStartDate": "2026-07-10",
-    "ministries": [
-        { "name": "Adolescentes", "image": "images/adolescentes.jpg", "label": "los Adolescentes" },
-        { "name": "Familia", "image": "images/Familia.jpg", "label": "la Familia" },
-        { "name": "Nuevos Creyentes", "image": "images/Nuevos Creyentes.jpeg", "label": "los Nuevos Creyentes" },
-        { "name": "Evangelismo", "image": "images/Evangelismo.jpg", "label": "Evangelismo" },
-        { "name": "Jóvenes", "image": "images/Jovenes.jpg", "label": "los Jóvenes" },
-        { "name": "Damas", "image": "images/Damas.jpg", "label": "las Damas" },
-        { "name": "Caballeros", "image": "images/Caballeros.jpg", "label": "los Caballeros" }
+    "schedules": [
+        {
+            "name": "Ministerios Viernes",
+            "active": true,
+            "cron": "0 15 * * 3",
+            "rotationStartDate": "2026-07-10",
+            "targetDay": 5,
+            "messageTemplate": "🙏 *Recordatorio Semanal* 🙏\n\nRecuerda que este *viernes* ({fecha}) dirigen *{label}*\n\n¡Prepárate para ministrar! 🕊️",
+            "groups": [
+                { "name": "Adolescentes", "image": "images/adolescentes.jpg", "label": "los Adolescentes" },
+                { "name": "Familia", "image": "images/Familia.jpg", "label": "la Familia" },
+                { "name": "Nuevos Creyentes", "image": "images/Nuevos Creyentes.jpeg", "label": "los Nuevos Creyentes" },
+                { "name": "Evangelismo", "image": "images/Evangelismo.jpg", "label": "Evangelismo" },
+                { "name": "Jóvenes", "image": "images/Jovenes.jpg", "label": "los Jóvenes" },
+                { "name": "Damas", "image": "images/Damas.jpg", "label": "las Damas" },
+                { "name": "Caballeros", "image": "images/Caballeros.jpg", "label": "los Caballeros" }
+            ]
+        },
+        {
+            "name": "Grupos Crecimiento Domingo",
+            "active": true,
+            "cron": "0 17 * * 3",
+            "rotationStartDate": "2026-07-12",
+            "targetDay": 0,
+            "messageTemplate": "📖 *Grupo de Crecimiento* 📖\n\nEste *domingo* ({fecha}) dirige *{label}*\n\n¡Te esperamos! 🎉",
+            "groups": [
+                { "name": "Rafael Mauricio", "image": "", "label": "Rafael Mauricio" },
+                { "name": "Miledys Gonzalez", "image": "", "label": "Miledys Gonzalez" },
+                { "name": "Juan R Perez y Carmen de los Santos", "image": "", "label": "Juan R. Pérez y Carmen de los Santos" },
+                { "name": "Kevin Castro", "image": "", "label": "Kevin Castro" },
+                { "name": "Bien Social", "image": "", "label": "Bien Social" },
+                { "name": "Ezequiel de la Rosa", "image": "", "label": "Ezequiel de la Rosa" }
+            ]
+        }
     ]
 }
