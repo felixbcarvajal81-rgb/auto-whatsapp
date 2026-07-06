@@ -100,8 +100,7 @@ async function startBot() {
             if (body.toLowerCase() === '!proximo') {
                 try {
                     let r = '📅 *Próximos eventos*\n\n';
-                    config.schedules.forEach(s => {
-                        if (!s.active) return;
+                    config.schedules.filter(s => s.active).sort((a, b) => a.targetDay - b.targetDay).forEach(s => {
                         const grupo = getGrupoSemana(s);
                         const target = getProximoDia(s.targetDay);
                         const f = target.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
