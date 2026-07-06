@@ -32,6 +32,7 @@ async function startBot() {
         syncFullHistory: false,
         markOnlineOnConnect: false,
         generateHighQualityLinkPreview: false,
+        connectTimeoutMs: 60000,
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -51,34 +52,19 @@ async function startBot() {
 
         if (connection === 'open') {
             console.error('=== CONECTADO A WHATSAPP ===');
-
             config.schedules.forEach(s => {
-                if (s.active) {
-                    try {
-                        iniciarProgramador(s);
-                    } catch (e) {
-                        console.error(`Error en programador ${s.name}:`, e.message);
-                    }
-                }
+                if (s.active) iniciarProgramador(s);
             });
-
-            try {
-                await sock.sendMessage(config.groupId, { text: '✅ Bot iniciado y listo' });
-            } catch (err) {
-                console.error('ERROR mensaje prueba:', err.message);
-            }
         }
 
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.error('Desconectado, reconectando...');
-            if (shouldReconnect) {
-                setTimeout(startBot, 5000);
-            } else {
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            console.error(`Desconectado. Código: ${statusCode}. Mensaje: ${lastDisconnect?.error?.message}`);
+            if (statusCode === DisconnectReason.loggedOut) {
                 console.error('Sesión cerrada, eliminando auth...');
                 if (fs.existsSync(AUTH_DIR)) fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-                setTimeout(startBot, 5000);
             }
+            setTimeout(startBot, 3000);
         }
     });
 
@@ -87,41 +73,33 @@ async function startBot() {
     sock.ev.on('messages.upsert', async ({ messages }) => {
         for (const msg of messages) {
             if (!msg.message || msg.key.fromMe) continue;
-
             const body = msg.message?.conversation ||
                          msg.message?.extendedTextMessage?.text || '';
-
             if (!body || !config.comandosHabilitados) continue;
-
-            console.error(`MENSAJE: ${body} de ${msg.key.remoteJid}`);
+            console.error(`CMD: ${body} de ${msg.key.remoteJid}`);
 
             if (body.toLowerCase() === '!proximo') {
-                let respuesta = '📅 *Próximos eventos*\n\n';
-                config.schedules.forEach(s => {
-                    if (!s.active) return;
-                    const grupo = getGrupoSemana(s);
-                    const target = getProximoDia(s.targetDay);
-                    const fecha = target.toLocaleDateString('es-ES', {
-                        weekday: 'long', day: 'numeric', month: 'long'
+                try {
+                    let r = '📅 *Próximos eventos*\n\n';
+                    config.schedules.forEach(s => {
+                        if (!s.active) return;
+                        const grupo = getGrupoSemana(s);
+                        const target = getProximoDia(s.targetDay);
+                        const f = target.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                        const d = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][s.targetDay];
+                        r += `▸ *${d}* (${f}): ${grupo.label}\n`;
                     });
-                    const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][s.targetDay];
-                    respuesta += `▸ *${diaSemana}* (${fecha}): ${grupo.label}\n`;
-                });
-                await sock.sendMessage(msg.key.remoteJid, { text: respuesta });
-                console.error(`Respuesta a !proximo enviada`);
+                    await sock.sendMessage(msg.key.remoteJid, { text: r });
+                } catch (e) { console.error('Error !proximo:', e.message); }
             }
 
             if (body.toLowerCase() === '!grupos') {
                 try {
                     const groups = await sock.groupFetchAllParticipating();
                     let lista = '📋 *Grupos del bot*\n\n';
-                    Object.entries(groups).forEach(([id, g]) => {
-                        lista += `▸ ${g.subject}\n  ID: ${id}\n\n`;
-                    });
+                    Object.entries(groups).forEach(([id, g]) => { lista += `▸ ${g.subject}\n  ID: ${id}\n\n`; });
                     await sock.sendMessage(msg.key.remoteJid, { text: lista });
-                } catch (e) {
-                    console.error('Error listando grupos:', e.message);
-                }
+                } catch (e) { console.error('Error !grupos:', e.message); }
             }
         }
     });
