@@ -20,6 +20,17 @@
             ]
         },
         {
+            "name": "Escuela de Liderazgo",
+            "active": true,
+            "cron": "0 10 * * 1",
+            "rotationStartDate": "2026-07-06",
+            "targetDay": 3,
+            "messageTemplate": "🎓 *Escuela de Formación de Liderazgo* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — ¡Te esperamos! 🙌",
+            "groups": [
+                { "name": "Escuela de Liderazgo", "image": "", "label": "la Escuela de Formación de Liderazgo" }
+            ]
+        },
+        {
             "name": "Grupos Crecimiento Domingo",
             "active": true,
             "cron": "0 17 * * 3",
