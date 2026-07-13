@@ -138,13 +138,19 @@ function revisarCumpleanos() {
     const dia = hoy.getDate();
     const mes = hoy.getMonth() + 1;
     const cumples = birthdays.filter(b => b.day === dia && b.month === mes);
-    for (const c of cumples) {
-        const msg = `🎂 ¡Feliz cumpleaños a *${c.name}*! 🎉\n\nQue Dios te bendiga en este día especial. 🙏`;
-        sock.sendMessage(config.groupId, { text: msg }).catch(() => {});
+    if (cumples.length === 0) return;
+    const names = cumples.map(c => `*${c.name}*`);
+    let msg;
+    if (cumples.length === 1) {
+        msg = `🎂 Hoy está de fiesta de cumpleaños: ${names[0]} 🎉\n\nQue Dios te bendiga en este día especial. 🙏`;
+    } else if (cumples.length === 2) {
+        msg = `🎂 Hoy están de fiesta de cumpleaños: ${names[0]} y ${names[1]} 🎉\n\nQue Dios los bendiga en este día especial. 🙏`;
+    } else {
+        const last = names.pop();
+        msg = `🎂 Hoy están de fiesta de cumpleaños: ${names.join(', ')} y ${last} 🎉\n\nQue Dios los bendiga en este día especial. 🙏`;
     }
-    if (cumples.length > 0) {
-        console.error(`Cumpleaños hoy: ${cumples.map(c => c.name).join(', ')}`);
-    }
+    sock.sendMessage(config.groupId, { text: msg }).catch(() => {});
+    console.error(`Cumpleaños hoy: ${cumples.map(c => c.name).join(', ')}`);
 }
 
 function iniciarProgramador(schedule) {
