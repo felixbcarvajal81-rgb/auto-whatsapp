@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const config = require('./config.json');
+const birthdays = require('./birthdays.json');
 const { getGrupoSemana, getProximoDia } = require('./rotation');
 
 const PORT = process.env.PORT || 3000;
@@ -66,6 +67,10 @@ async function startBot() {
             config.schedules.forEach(s => {
                 if (s.active) iniciarProgramador(s);
             });
+            if (birthdayTask) birthdayTask.stop();
+            birthdayTask = cron.schedule('0 9 * * *', () => revisarCumpleanos());
+            revisarCumpleanos();
+            console.error('Revisión de cumpleaños activada (9:00 AM)');
         }
 
         if (connection === 'close') {
@@ -124,6 +129,22 @@ async function startBot() {
             }
         }
     });
+}
+
+let birthdayTask = null;
+
+function revisarCumpleanos() {
+    const hoy = new Date();
+    const dia = hoy.getDate();
+    const mes = hoy.getMonth() + 1;
+    const cumples = birthdays.filter(b => b.day === dia && b.month === mes);
+    for (const c of cumples) {
+        const msg = `🎂 ¡Feliz cumpleaños a *${c.name}*! 🎉\n\nQue Dios te bendiga en este día especial. 🙏`;
+        sock.sendMessage(config.groupId, { text: msg }).catch(() => {});
+    }
+    if (cumples.length > 0) {
+        console.error(`Cumpleaños hoy: ${cumples.map(c => c.name).join(', ')}`);
+    }
 }
 
 function iniciarProgramador(schedule) {
