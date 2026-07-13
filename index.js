@@ -141,13 +141,15 @@ function revisarCumpleanos() {
     if (cumples.length === 0) return;
     const names = cumples.map(c => `*${c.name}*`);
     let msg;
+    const bendicion = 'Que la gracia de Dios te cubra en este día 🙏';
+    const bendicionPlural = 'Que la gracia de Dios los cubra en este día 🙏';
     if (cumples.length === 1) {
-        msg = `🎂 Hoy está de fiesta de cumpleaños: ${names[0]} 🎉\n\nQue Dios te bendiga en este día especial. 🙏`;
+        msg = `🎂 Hoy está de fiesta de cumpleaños: ${names[0]} 🎉\n\n${bendicion}`;
     } else if (cumples.length === 2) {
-        msg = `🎂 Hoy están de fiesta de cumpleaños: ${names[0]} y ${names[1]} 🎉\n\nQue Dios los bendiga en este día especial. 🙏`;
+        msg = `🎂 Hoy están de fiesta de cumpleaños: ${names[0]} y ${names[1]} 🎉\n\n${bendicionPlural}`;
     } else {
         const last = names.pop();
-        msg = `🎂 Hoy están de fiesta de cumpleaños: ${names.join(', ')} y ${last} 🎉\n\nQue Dios los bendiga en este día especial. 🙏`;
+        msg = `🎂 Hoy están de fiesta de cumpleaños: ${names.join(', ')} y ${last} 🎉\n\n${bendicionPlural}`;
     }
     sock.sendMessage(config.groupId, { text: msg }).catch(() => {});
     console.error(`Cumpleaños hoy: ${cumples.map(c => c.name).join(', ')}`);
