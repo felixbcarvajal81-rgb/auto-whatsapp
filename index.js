@@ -68,9 +68,9 @@ async function startBot() {
                 if (s.active) iniciarProgramador(s);
             });
             if (birthdayTask) birthdayTask.stop();
-            birthdayTask = cron.schedule('0 9 * * *', () => revisarCumpleanos());
+            birthdayTask = cron.schedule('0 7 * * *', () => revisarCumpleanos());
             revisarCumpleanos();
-            console.error('Revisión de cumpleaños activada (9:00 AM)');
+            console.error('Revisión de cumpleaños activada (7:00 AM)');
         }
 
         if (connection === 'close') {
