@@ -132,17 +132,20 @@ async function startBot() {
 }
 
 let birthdayTask = null;
-let birthdayNotifiedToday = null;
+const BIRTHDAY_FLAG = path.join(AUTH_DIR, '.birthday_sent');
 
 function revisarCumpleanos() {
     const hoy = new Date();
     const dia = hoy.getDate();
     const mes = hoy.getMonth() + 1;
     const todayKey = `${mes}-${dia}`;
-    if (birthdayNotifiedToday === todayKey) return;
+    try {
+        const sent = fs.readFileSync(BIRTHDAY_FLAG, 'utf8').trim();
+        if (sent === todayKey) return;
+    } catch (_) {}
     const cumples = birthdays.filter(b => b.day === dia && b.month === mes);
     if (cumples.length === 0) return;
-    birthdayNotifiedToday = todayKey;
+    fs.writeFileSync(BIRTHDAY_FLAG, todayKey);
     const names = cumples.map(c => `*${c.name}*`);
     let msg;
     const bendicion = 'Que la gracia de Dios te cubra en este día 🙏';
