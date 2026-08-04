@@ -162,6 +162,39 @@ function revisarCumpleanos() {
     console.error(`Cumpleaños hoy: ${cumples.map(c => c.name).join(', ')}`);
 }
 
+async function enviarProgramado(schedule) {
+    try {
+        const grupo = getGrupoSemana(schedule);
+        const target = getProximoDia(schedule.targetDay);
+        const fecha = target.toLocaleDateString('es-ES', {
+            weekday: 'long', day: 'numeric', month: 'long'
+        });
+        const mensaje = schedule.messageTemplate
+            .replace('{fecha}', fecha)
+            .replace('{label}', grupo.label);
+
+        if (grupo.image) {
+            const imagePath = path.join(__dirname, grupo.image);
+            if (fs.existsSync(imagePath)) {
+                const img = fs.readFileSync(imagePath);
+                const ext = path.extname(imagePath).slice(1);
+                await sock.sendMessage(config.groupId, {
+                    image: img,
+                    caption: mensaje,
+                    mimetype: `image/${ext === 'jpg' ? 'jpeg' : ext}`
+                });
+            } else {
+                await sock.sendMessage(config.groupId, { text: mensaje });
+            }
+        } else {
+            await sock.sendMessage(config.groupId, { text: mensaje });
+        }
+        console.error(`[${schedule.name}] Enviado: ${grupo.name}`);
+    } catch (err) {
+        console.error(`[${schedule.name}] Error:`, err.message);
+    }
+}
+
 function iniciarProgramador(schedule) {
     const diaSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][schedule.targetDay];
 
@@ -170,41 +203,21 @@ function iniciarProgramador(schedule) {
     }
     const hoy = new Date();
     const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-    const cronExpr = (schedule.overrideDate === hoyStr && schedule.overrideCron) ? schedule.overrideCron : schedule.cron;
-    console.error(`Programador: ${schedule.name} → ${cronExpr}${cronExpr !== schedule.cron ? ' (override hoy)' : ''}`);
+    const cronExpr = schedule.cron;
+    console.error(`Programador: ${schedule.name} → ${cronExpr}`);
 
-    cronTasks[schedule.name] = cron.schedule(cronExpr, async () => {
-        try {
-            const grupo = getGrupoSemana(schedule);
-            const target = getProximoDia(schedule.targetDay);
-            const fecha = target.toLocaleDateString('es-ES', {
-                weekday: 'long', day: 'numeric', month: 'long'
-            });
-            const mensaje = schedule.messageTemplate
-                .replace('{fecha}', fecha)
-                .replace('{label}', grupo.label);
+    cronTasks[schedule.name] = cron.schedule(cronExpr, () => enviarProgramado(schedule));
 
-            if (grupo.image) {
-                const imagePath = path.join(__dirname, grupo.image);
-                if (fs.existsSync(imagePath)) {
-                    const img = fs.readFileSync(imagePath);
-                    const ext = path.extname(imagePath).slice(1);
-                    await sock.sendMessage(config.groupId, {
-                        image: img,
-                        caption: mensaje,
-                        mimetype: `image/${ext === 'jpg' ? 'jpeg' : ext}`
-                    });
-                } else {
-                    await sock.sendMessage(config.groupId, { text: mensaje });
-                }
-            } else {
-                await sock.sendMessage(config.groupId, { text: mensaje });
-            }
-            console.error(`[${schedule.name}] Enviado: ${grupo.name}`);
-        } catch (err) {
-            console.error(`[${schedule.name}] Error:`, err.message);
-        }
-    });
+    if (schedule.overrideDate === hoyStr && schedule.overrideCron) {
+        const parts = schedule.overrideCron.split(' ').map(Number);
+        const target = new Date(hoy);
+        target.setHours(parts[1], parts[0], 0, 0);
+        let delay = target - hoy;
+        if (delay < 0) delay = 0;
+        console.error(`Programador: ${schedule.name} → override HOY a las ${parts[1]}:${String(parts[0]).padStart(2, '0')} (${delay / 1000}s)`);
+        const timer = setTimeout(() => enviarProgramado(schedule), delay);
+        cronTasks[schedule.name + ' (override)'] = { stop: () => clearTimeout(timer) };
+    }
 }
 
 startBot();
