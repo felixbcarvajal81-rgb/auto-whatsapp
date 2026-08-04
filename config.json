@@ -23,9 +23,11 @@
             "name": "Escuela de Liderazgo",
             "active": true,
             "cron": "0 15 * * 1",
+            "overrideCron": "30 19 * * 1",
+            "overrideDate": "2026-07-20",
             "rotationStartDate": "2026-07-06",
             "targetDay": 3,
-            "messageTemplate": "🎓 *Recuerda que el miercoles estamos en la Escuela de Formación de Liderazgo* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — ¡Te esperamos! 🙌",
+            "messageTemplate": "🎓 *Recuerda que el miercoles estaremos en la Escuela de Formación de Liderazgo Y estaremos trabajando el libro de APOCALIPSIS* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — ¡Te esperamos! 🙌",
             "groups": [
                 { "name": "Escuela de Liderazgo", "image": "images/Escuela_Liderazgo.png", "label": "la Escuela de Formación de Liderazgo" }
             ]

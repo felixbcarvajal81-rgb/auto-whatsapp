@@ -168,9 +168,12 @@ function iniciarProgramador(schedule) {
     if (cronTasks[schedule.name]) {
         cronTasks[schedule.name].stop();
     }
-    console.error(`Programador: ${schedule.name} → ${schedule.cron}`);
+    const hoy = new Date();
+    const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+    const cronExpr = (schedule.overrideDate === hoyStr && schedule.overrideCron) ? schedule.overrideCron : schedule.cron;
+    console.error(`Programador: ${schedule.name} → ${cronExpr}${cronExpr !== schedule.cron ? ' (override hoy)' : ''}`);
 
-    cronTasks[schedule.name] = cron.schedule(schedule.cron, async () => {
+    cronTasks[schedule.name] = cron.schedule(cronExpr, async () => {
         try {
             const grupo = getGrupoSemana(schedule);
             const target = getProximoDia(schedule.targetDay);
