@@ -1,12 +1,13 @@
 {
     "groupId": "18094266177-1517460976@g.us",
     "comandosHabilitados": true,
+    "adminKey": "ministros2026",
     "schedules": [
         {
             "name": "Ministerios Viernes",
             "active": true,
-            "cron": "0 15 * * 3",
-            "rotationStartDate": "2026-07-10",
+            "cron": "0 15 * * 4",
+            "rotationStartDate": "2026-07-17",
             "targetDay": 5,
             "messageTemplate": "🙏 *Recordatorio Semanal* 🙏\n\nRecuerda que este *viernes* ({fecha}) dirigen *{label}*\n\n¡Prepárate para ministrar! 🕊️",
             "groups": [
@@ -23,8 +24,6 @@
             "name": "Escuela de Liderazgo",
             "active": true,
             "cron": "0 15 * * 1",
-            "overrideCron": "30 19 * * *",
-            "overrideDate": "2026-08-04",
             "rotationStartDate": "2026-07-06",
             "targetDay": 3,
             "messageTemplate": "🎓 *Recuerda que el miercoles estaremos en la Escuela de Formación de Liderazgo Y estaremos trabajando el libro de APOCALIPSIS* 🎓\n\nEste *miércoles* ({fecha}) a las *7:30 PM* — ¡Te esperamos! 🙌",
@@ -35,7 +34,7 @@
         {
             "name": "Grupos Crecimiento Domingo",
             "active": true,
-            "cron": "0 17 * * 5",
+            "cron": "0 15 * * 6",
             "rotationStartDate": "2026-07-12",
             "targetDay": 0,
             "messageTemplate": "📖 *Grupo de Crecimiento* 📖\n\nEste *domingo* ({fecha}) dirige *{label}*\n\n¡Te esperamos! 🎉",
