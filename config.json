@@ -7,7 +7,7 @@
             "name": "Ministerios Viernes",
             "active": true,
             "cron": "0 15 * * 4",
-            "rotationStartDate": "2026-07-17",
+            "rotationStartDate": "2026-08-07",
             "targetDay": 5,
             "messageTemplate": "🙏 *Recordatorio Semanal* 🙏\n\nRecuerda que este *viernes* ({fecha}) dirigen *{label}*\n\n¡Prepárate para ministrar! 🕊️",
             "groups": [
