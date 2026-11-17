@@ -19,6 +19,16 @@ const cronTasks = {};
 
 function limpiarAuth() {
     if (!fs.existsSync(AUTH_DIR)) return;
+    for (const file of ['creds.json', 'creds.json.bak']) {
+        const credsPath = path.join(AUTH_DIR, file);
+        if (!fs.existsSync(credsPath)) continue;
+        try {
+            fs.rmSync(credsPath, { force: true });
+            console.error(`Borrado ${file}`);
+        } catch (e) {
+            console.error(`No se pudo borrar ${file}: ${e.message}`);
+        }
+    }
     const entries = fs.readdirSync(AUTH_DIR);
     console.error(`Borrando ${entries.length} archivos de auth (la carpeta se conserva)`);
     let ok = 0;
@@ -52,6 +62,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => console.log(`Health check en puerto ${PORT}`));
 
 async function startBot() {
+    console.error('Inicio bot reconexion-2');
     if (fs.existsSync(AUTH_DIR)) {
         const files = fs.readdirSync(AUTH_DIR).filter(f => f !== 'creds.json' && f.endsWith('.json'));
         const hasCreds = fs.existsSync(path.join(AUTH_DIR, 'creds.json'));
