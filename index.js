@@ -14,7 +14,26 @@ const PORT = process.env.PORT || 3000;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 let sock = null;
 let retryCount = 0;
+let reconnectTimer = null;
 const cronTasks = {};
+
+function limpiarAuth() {
+    if (!fs.existsSync(AUTH_DIR)) return;
+    const entries = fs.readdirSync(AUTH_DIR);
+    console.error(`Borrando ${entries.length} archivos de auth (la carpeta se conserva)`);
+    let ok = 0;
+    let fallos = 0;
+    for (const file of entries) {
+        try {
+            fs.rmSync(path.join(AUTH_DIR, file), { recursive: true, force: true });
+            ok++;
+        } catch (e) {
+            fallos++;
+            if (fallos <= 3) console.error(`No se pudo borrar ${file}: ${e.message}`);
+        }
+    }
+    console.error(`Auth limpiada: ${ok} borrados, ${fallos} fallos`);
+}
 
 // Clean up old puppeteer stuff
 ['.wwebjs_auth', '.wwebjs_cache'].forEach(d => {
@@ -69,6 +88,7 @@ async function startBot() {
         }
 
         if (connection === 'open') {
+            retryCount = 0;
             console.error('=== CONECTADO A WHATSAPP ===');
             config.schedules.forEach(s => {
                 if (s.active) iniciarProgramador(s);
@@ -80,17 +100,25 @@ async function startBot() {
         }
 
         if (connection === 'close') {
+            if (reconnectTimer) return;
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             console.error(`Desconectado. Código: ${statusCode} (intento #${retryCount + 1})`);
             if (statusCode === DisconnectReason.loggedOut) {
-                console.error('Sesión cerrada — eliminando auth y reiniciando');
-                if (fs.existsSync(AUTH_DIR)) fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                console.error('Sesión cerrada — limpiando archivos de auth');
+                try {
+                    limpiarAuth();
+                } catch (e) {
+                    console.error('Error limpiando auth:', e.message);
+                }
                 retryCount = 0;
             }
-            const delay = Math.min(30000 * Math.pow(2, retryCount), 300000); // up to 5 min
+            const delay = Math.min(30000 * Math.pow(2, retryCount), 300000);
             retryCount++;
             console.error(`Reconectando en ${delay / 1000}s...`);
-            setTimeout(() => startBot(), delay);
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                startBot().catch((e) => console.error('Error al reiniciar:', e.message));
+            }, delay);
         }
     });
 
